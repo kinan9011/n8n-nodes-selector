@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-selector",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A selector node for n8n, including Single Select and Multi Select modes for dynamic routing based on conditions.",
   "keywords": [
     "n8n-community-node-package",
@@ -40,7 +40,7 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "nodes": [
-      "dist/nodes/Selector/selector.node.js"
+      "dist/nodes/Selector/Selector.node.js"
     ]
   },
   "devDependencies": {
