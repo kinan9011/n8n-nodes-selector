@@ -1,8 +1,10 @@
 import {
-	type IExecuteFunctions,
-	type INodeExecutionData,
-	type INodeProperties,
-	// NodeConnectionType,
+        type IExecuteFunctions,
+        type INodeExecutionData,
+        type INodeProperties,
+        // NodeConnectionType,
+        NodeOperationError,
+        ApplicationError,
 } from 'n8n-workflow';
 
 import {updateDisplayOptions} from '../../helpers/utils';
@@ -66,13 +68,19 @@ export async function execute(
 
 		// Pass through the selected data
 		returnData.push(...selectedData);
-	} catch (error) {
-		if (this.continueOnFail()) {
-			returnData.push({ json: { error: error.message } });
-		} else {
-			throw new Error(error);
-		}
-	}
+        } catch (error) {
+                if (this.continueOnFail()) {
+                        returnData.push({ json: { error: (error as Error).message } });
+                } else {
+                        if (error instanceof NodeOperationError) {
+                                throw error;
+                        }
+                        if (error instanceof ApplicationError) {
+                                throw error;
+                        }
+                        throw new NodeOperationError(this.getNode(), error as Error);
+                }
+        }
 
 	return [returnData];
 }
