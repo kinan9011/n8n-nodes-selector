@@ -40,7 +40,8 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "nodes": [
-      "dist/nodes/Selector/Selector.node.js"
+      "dist/nodes/Selector/Selector.node.js",
+      "dist/nodes/Telegram/TelegramRaw.node.js"
     ]
   },
   "devDependencies": {

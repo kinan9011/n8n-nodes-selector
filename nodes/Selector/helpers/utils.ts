@@ -8,10 +8,6 @@ import type {
 import { NodeConnectionType, NodeHelpers } from 'n8n-workflow';
 import { merge } from 'lodash';
 
-export const getTypeValidationStrictness = (version: number) => {
-	return `={{ ($nodeVersion < ${version} ? $parameter.options.looseTypeValidation :  $parameter.looseTypeValidation) ? "loose" : "strict" }}`;
-};
-
 export const looseTypeValidationProperty: INodeProperties = {
 	displayName: 'Convert Types Where Required',
 	// eslint-disable-next-line n8n-nodes-base/node-param-description-boolean-without-whether
@@ -36,7 +32,7 @@ export function updateDisplayOptions(
 
 export const configuredInputs = (parameters: INodeParameters) => {
 	return Array.from({ length: (parameters.numberInputs as number) || 2 }, (_, i) => ({
-		type: `${NodeConnectionType.Main}`,
+		type: 'main',
 		displayName: `Input ${(i + 1).toString()}`,
 		maxConnections: 1,
 	}));

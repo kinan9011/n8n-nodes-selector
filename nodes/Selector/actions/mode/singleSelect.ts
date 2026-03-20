@@ -6,7 +6,7 @@ import {
 } from 'n8n-workflow';
 import { NodeOperationError, ApplicationError } from 'n8n-workflow';
 
-import { updateDisplayOptions, getTypeValidationStrictness, looseTypeValidationProperty } from '../../helpers/utils';
+import { updateDisplayOptions, looseTypeValidationProperty } from '../../helpers/utils';
 
 export const properties: INodeProperties[] = [
 	{
@@ -17,16 +17,7 @@ export const properties: INodeProperties[] = [
 		typeOptions: {
 			filter: {
 				caseSensitive: '={{!$parameter.options.ignoreCase}}',
-				typeValidation: getTypeValidationStrictness(2.1),
-			},
-		},
-	},
-	{
-		...looseTypeValidationProperty,
-		default: false,
-		displayOptions: {
-			show: {
-				'@version': [{ _cnd: { gte: 2.1 } }],
+				typeValidation: '={{ $parameter.options.looseTypeValidation ? "loose" : "strict" }}',
 			},
 		},
 	},
@@ -44,14 +35,7 @@ export const properties: INodeProperties[] = [
 				type: 'boolean',
 				default: true,
 			},
-			{
-				...looseTypeValidationProperty,
-				displayOptions: {
-					show: {
-						'@version': [{ _cnd: { lt: 2.1 } }],
-					},
-				},
-			},
+			looseTypeValidationProperty,
 		],
 	},
 	{
@@ -83,25 +67,7 @@ export async function execute(
 	const returnData: INodeExecutionData[] = [];
 	const waitForAllInputs = this.getNodeParameter('waitForAllInputs', 0, false) as boolean;
 
-	// Attempt to get input data for index 0 and 1.
-	// If an input isn't connected, fall back to an empty array.
-	let inputData1: INodeExecutionData[] = [];
-	let inputData2: INodeExecutionData[] = [];
-
 	try {
-		inputData1 = this.getInputData(0);
-	} catch (err) {
-		inputData1 = [];
-	}
-
-	try {
-		inputData2 = this.getInputData(1);
-	} catch (err) {
-		inputData2 = [];
-	}
-
-	try {
-		// Ensure the index is within valid bounds
 		if (waitForAllInputs) {
 			const allInputsReceived = inputsData.every(inputArray => inputArray.length > 0);
 			if (!allInputsReceived) {
@@ -109,28 +75,13 @@ export async function execute(
 			}
 		}
 
-		let pass = false;
-		try {
-			// Retrieve the "condition" parameter from the node's parameters.
-			// const conditionParam = this.getNodeParameter('condition', 0, { extractValue: true });
-			// Convert the parameter value to a boolean.
-			// pass = conditionParam === true || conditionParam === 'true';
-			pass = this.getNodeParameter('conditions', 0, false, { extractValue: true }) as boolean;
-		} catch (error) {
-			throw error;
-		}
+		const pass = this.getNodeParameter('conditions', 0, false, { extractValue: true }) as boolean;
 
-		let outputData: INodeExecutionData[] = [];
 		// If the condition is true, use the first input data; otherwise, the second.
-		if (pass) {
-			outputData = inputData1;
-		} else {
-			outputData = inputData2;
-		}
+		const outputData = pass ? inputsData[0] || [] : inputsData[1] || [];
 
 		returnData.push(...outputData);
 	} catch (error) {
-		// Handle errors and allow the workflow to continue if "Continue on Fail" is enabled.
 		if (this.continueOnFail()) {
 			returnData.push({ json: { error: error.message } });
 		} else {

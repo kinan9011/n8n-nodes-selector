@@ -2,8 +2,8 @@ import {
 	type IExecuteFunctions,
 	type INodeExecutionData,
 	type INodeProperties,
-	// NodeConnectionType,
 } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 
 import {updateDisplayOptions} from '../../helpers/utils';
 
@@ -70,7 +70,7 @@ export async function execute(
 		if (this.continueOnFail()) {
 			returnData.push({ json: { error: error.message } });
 		} else {
-			throw new Error(error);
+			throw new NodeOperationError(this.getNode(), error);
 		}
 	}
 
