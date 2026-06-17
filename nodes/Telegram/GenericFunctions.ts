@@ -5,7 +5,7 @@ import type {
 	IRequestOptions,
 	JsonObject,
 } from 'n8n-workflow';
-import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import { NodeApiError } from 'n8n-workflow';
 
 export async function apiRequest(
 	this: IExecuteFunctions,
@@ -47,27 +47,16 @@ export async function apiRequestMultiBot(
 	method: IHttpRequestMethods,
 	endpoint: string,
 	body: IDataObject,
-	botIndex: number,
+	token: string,
+	baseUrl: string,
 	query?: IDataObject,
 ): Promise<unknown> {
-	const credentials = await this.getCredentials('telegramMultiBotApi');
-
-	const tokenField = `botToken${botIndex}`;
-	const token = credentials[tokenField] as string | undefined;
-
-	if (!token) {
-		throw new NodeOperationError(
-			this.getNode(),
-			`No bot token configured at slot ${botIndex}. Add a token in the TelegramMultiBot credential.`,
-		);
-	}
-
 	query = query || {};
 
 	const options: IRequestOptions = {
 		headers: {},
 		method,
-		uri: `${credentials.baseUrl}/bot${token}/${endpoint}`,
+		uri: `${baseUrl}/bot${token}/${endpoint}`,
 		body,
 		qs: query,
 		json: true,

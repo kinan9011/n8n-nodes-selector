@@ -39,10 +39,7 @@
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
-    "credentials": [
-      "dist/credentials/TelegramMultiBotApi.credentials.js"
-    ],
-    "nodes": [
+"nodes": [
       "dist/nodes/Selector/Selector.node.js",
       "dist/nodes/Telegram/TelegramRaw.node.js",
       "dist/nodes/Telegram/TelegramMultiBot.node.js"
