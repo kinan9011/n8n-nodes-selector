@@ -9,6 +9,8 @@ import { NodeOperationError } from 'n8n-workflow';
 
 import { apiRequestMultiBot } from './GenericFunctions';
 
+const SLOT_COUNT = 5;
+
 export class TelegramMultiBot implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Telegram Multi Bot',
@@ -23,52 +25,14 @@ export class TelegramMultiBot implements INodeType {
 		},
 		inputs: ['main'],
 		outputs: ['main'],
+		credentials: [
+			{ name: 'telegramBot0Api', required: true },
+			{ name: 'telegramBot1Api', required: false },
+			{ name: 'telegramBot2Api', required: false },
+			{ name: 'telegramBot3Api', required: false },
+			{ name: 'telegramBot4Api', required: false },
+		],
 		properties: [
-			{
-				displayName: 'Base URL',
-				name: 'baseUrl',
-				type: 'string',
-				default: 'https://api.telegram.org',
-				description: 'Telegram Bot API base URL',
-			},
-			{
-				displayName: 'Bot Tokens',
-				name: 'botTokens',
-				type: 'fixedCollection',
-				typeOptions: {
-					multipleValues: true,
-					sortable: true,
-				},
-				placeholder: 'Add Bot',
-				default: {},
-				description: 'List of bot tokens. Rules reference bots by their index (0-based).',
-				options: [
-					{
-						displayName: 'Bot',
-						name: 'values',
-						values: [
-							{
-								displayName: 'Label',
-								name: 'botLabel',
-								type: 'string',
-								default: '',
-								placeholder: 'e.g. support-bot',
-								description: 'Optional label for your reference',
-							},
-							{
-								displayName: 'Bot Token',
-								name: 'botToken',
-								type: 'string',
-								typeOptions: { password: true },
-								default: '',
-								required: true,
-								placeholder: '123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11',
-								description: 'Telegram bot token from @BotFather',
-							},
-						],
-					},
-				],
-			},
 			{
 				displayName: 'Routing Rules',
 				name: 'rules',
@@ -98,30 +62,36 @@ export class TelegramMultiBot implements INodeType {
 								},
 							},
 							{
-								displayName: 'Bot Index',
+								displayName: 'Bot Slot',
 								name: 'botIndex',
-								type: 'number',
+								type: 'options',
 								default: 0,
-								description: 'Index (0-based) of the bot in the Bot Tokens list to use when this rule matches',
-								typeOptions: {
-									minValue: 0,
-									numberPrecision: 0,
-								},
+								description: 'Which bot credential to use when this rule matches',
+								options: [
+									{ name: 'Bot Slot 0', value: 0 },
+									{ name: 'Bot Slot 1', value: 1 },
+									{ name: 'Bot Slot 2', value: 2 },
+									{ name: 'Bot Slot 3', value: 3 },
+									{ name: 'Bot Slot 4', value: 4 },
+								],
 							},
 						],
 					},
 				],
 			},
 			{
-				displayName: 'Fallback Bot Index',
+				displayName: 'Fallback Bot Slot',
 				name: 'fallbackIndex',
-				type: 'number',
+				type: 'options',
 				default: 0,
-				description: 'Index (0-based) of the bot to use when no rule matches',
-				typeOptions: {
-					minValue: 0,
-					numberPrecision: 0,
-				},
+				description: 'Which bot credential to use when no rule matches',
+				options: [
+					{ name: 'Bot Slot 0', value: 0 },
+					{ name: 'Bot Slot 1', value: 1 },
+					{ name: 'Bot Slot 2', value: 2 },
+					{ name: 'Bot Slot 3', value: 3 },
+					{ name: 'Bot Slot 4', value: 4 },
+				],
 			},
 			{
 				displayName: 'API Method',
@@ -151,20 +121,21 @@ export class TelegramMultiBot implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
+		// Cache credentials per slot to avoid redundant lookups
+		const credCache: Record<number, { accessToken: string; baseUrl: string }> = {};
+
+		const getSlotCredentials = async (slot: number) => {
+			if (credCache[slot]) return credCache[slot];
+			const cred = await this.getCredentials(`telegramBot${slot}Api`);
+			credCache[slot] = {
+				accessToken: cred.accessToken as string,
+				baseUrl: (cred.baseUrl as string) || 'https://api.telegram.org',
+			};
+			return credCache[slot];
+		};
+
 		for (let i = 0; i < items.length; i++) {
 			try {
-				const baseUrl = this.getNodeParameter('baseUrl', i, 'https://api.telegram.org') as string;
-				const botTokensData = this.getNodeParameter('botTokens', i, {}) as {
-					values?: Array<{ botToken: string; botLabel: string }>;
-				};
-				const botList = botTokensData.values ?? [];
-
-				if (botList.length === 0) {
-					throw new NodeOperationError(this.getNode(), 'No bot tokens configured. Add at least one bot.', {
-						itemIndex: i,
-					});
-				}
-
 				const fallbackIndex = this.getNodeParameter('fallbackIndex', i, 0) as number;
 				const rulesData = this.getNodeParameter('rules', i, {}) as {
 					values?: Array<{ botIndex: number }>;
@@ -187,22 +158,15 @@ export class TelegramMultiBot implements INodeType {
 					}
 				}
 
-				if (botIndex >= botList.length) {
+				if (botIndex < 0 || botIndex >= SLOT_COUNT) {
 					throw new NodeOperationError(
 						this.getNode(),
-						`Bot index ${botIndex} out of range — only ${botList.length} bot(s) configured.`,
+						`Bot slot ${botIndex} is out of range (0–${SLOT_COUNT - 1}).`,
 						{ itemIndex: i },
 					);
 				}
 
-				const token = botList[botIndex].botToken;
-				if (!token) {
-					throw new NodeOperationError(
-						this.getNode(),
-						`Bot at index ${botIndex} has no token set.`,
-						{ itemIndex: i },
-					);
-				}
+				const { accessToken, baseUrl } = await getSlotCredentials(botIndex);
 
 				const apiMethod = this.getNodeParameter('apiMethod', i) as string;
 				const jsonBodyRaw = this.getNodeParameter('jsonBody', i);
@@ -220,7 +184,7 @@ export class TelegramMultiBot implements INodeType {
 					body = jsonBodyRaw as IDataObject;
 				}
 
-				const response = await apiRequestMultiBot.call(this, 'POST', apiMethod, body, token, baseUrl);
+				const response = await apiRequestMultiBot.call(this, 'POST', apiMethod, body, accessToken, baseUrl);
 
 				returnData.push({
 					json: response as IDataObject,
