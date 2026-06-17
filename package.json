@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-selector",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "A selector node for n8n, including Single Select and Multi Select modes for dynamic routing based on conditions.",
   "keywords": [
     "n8n-community-node-package",
@@ -39,9 +39,13 @@
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/TelegramMultiBotApi.credentials.js"
+    ],
     "nodes": [
       "dist/nodes/Selector/Selector.node.js",
-      "dist/nodes/Telegram/TelegramRaw.node.js"
+      "dist/nodes/Telegram/TelegramRaw.node.js",
+      "dist/nodes/Telegram/TelegramMultiBot.node.js"
     ]
   },
   "devDependencies": {
